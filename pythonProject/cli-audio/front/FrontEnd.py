@@ -3,13 +3,14 @@ import curses.textpad
 import os
 import sys
 from cliExceptions.CLI_Exception import CLI_Audio_File_Exception
+from cliExceptions.CLI_Exception import CLI_Audio_Screen_Size_Exception
 
 class FrontEnd:
 
     def __init__(self, player,library):
         self.player = player
         self.library = library
-        self.directory = "./media/playlist1"
+        self.directory = "./media/playlist1/"
         self.playlist = []
         self.player.play('./media/playlist1/bird.wav')
         curses.wrapper(self.menu)
@@ -17,6 +18,12 @@ class FrontEnd:
     def menu(self, args):
         self.stdscr = curses.initscr()
         self.stdscr.border()
+        height,width = self.stdscr.getmaxyx()
+        if (height < 25):
+            raise CLI_Audio_Screen_Size_Exception("Please increase screen height","")
+        if (width < 90):
+            raise CLI_Audio_Screen_Size_Exception("Please increase screen width","")
+
         self.stdscr.addstr(0,0, "cli-audio",curses.A_REVERSE)
         self.stdscr.addstr(5,10, "c - Change current song")
         self.stdscr.addstr(6,10, "p - Play/Pause")
@@ -50,17 +57,28 @@ class FrontEnd:
     def changeSong(self):
         changeWindow = curses.newwin(5, 40, 5, 50)
         changeWindow.border()
-        changeWindow.addstr(0,0, "Please Enter the index of the song", curses.A_REVERSE)
+        changeWindow.addstr(0,0, "Please Enter the index of the song: playlist length " + str(len(self.playlist)), curses.A_REVERSE)
         self.stdscr.refresh()
         curses.echo()
         path = changeWindow.getstr(1,1, 1)
-        if (int(path) > len(self.playlist)):
-            raise CLI_Audio_File_Exception("The song requested is not available in the playlist","CLI_AUDIO_FILE_EXCEPTION!")
         curses.noecho()
         del changeWindow
         self.stdscr.touchwin()
         self.stdscr.refresh()
         self.player.stop()
+
+        try:
+            if (int(path) > len(self.playlist)):
+                self.stdscr.addstr(2,15, "Song not Found!")
+                raise CLI_Audio_File_Exception("The song requested is not available in the playlist","CLI_AUDIO_FILE_EXCEPTION!")
+
+        except CLI_Audio_File_Exception:
+            # print("Song not available")
+            return
+        except:
+            return
+
+        self.stdscr.addstr(2,15, "                            ")
         index = self.playlist[int(path)-1]
         songs = os.listdir(self.directory)
         song = self.directory + index
